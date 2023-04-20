@@ -1,6 +1,7 @@
 from flask import Flask,render_template,request
 from transformers import AutoTokenizer, AutoModelWithLMHead
 import torch
+import json
 import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk import PorterStemmer
@@ -8,16 +9,37 @@ from nltk.corpus import stopwords
 import math
 from statistics import mean
 import argparse
+from transformers import LEDTokenizer, LEDForConditionalGeneration, LEDConfig
+from transformers import BartTokenizer, BartForConditionalGeneration, BartConfig
+from rouge_score import rouge_scorer
+from rouge import Rouge
 nltk.download('punkt')
 nltk.download('stopwords')
 
+ref_text=[]
 # Abstractive model building
 src_text = ("While a number of definitions of artificial intelligence (AI) have surfaced over the last few decades, John McCarthy offers the following definition in this 2004 paper (PDF, 106 KB) (link resides outside IBM), It is the science and engineering of making intelligent machines, especially intelligent computer programs. It is related to the similar task of using computers to understand human intelligence, but AI does not have to confine itself to methods that are biologically observable.However, decades before this definition, the birth of the artificial intelligence conversation was denoted by Alan Turing's seminal work, Computing Machinery and Intelligence (PDF, 89.8 KB) (link resides outside of IBM), which was published in 1950. In this paper, Turing, often referred to as the father of computer science, asks the following question, Can machines think?  From there, he offers a test, now famously known as the Turing Test, where a human interrogator would try to distinguish between a computer and human text response. While this test has undergone much scrutiny since its publish, it remains an important part of the history of AI as well as an ongoing concept within philosophy as it utilizes ideas around linguistics." )
-tokenizer = AutoTokenizer.from_pretrained('t5-base')
-model = AutoModelWithLMHead.from_pretrained('t5-base', return_dict=True)
+# tokenizer = AutoTokenizer.from_pretrained('t5-base')
+# model = AutoModelWithLMHead.from_pretrained('t5-base', return_dict=True)
+# text=[]
+
+### T5
+tokenizer1 = AutoTokenizer.from_pretrained('t5-base')
+model1 = AutoModelWithLMHead.from_pretrained('t5-base', return_dict=True)
+text1=[]
+
+### LED
+tokenizer2 = LEDTokenizer.from_pretrained('allenai/led-base-16384')
+model2 = LEDForConditionalGeneration.from_pretrained('allenai/led-base-16384')
+text2=[]
+
+# BART
+tokenizer3 = BartTokenizer.from_pretrained('facebook/bart-large-cnn')
+model3 = BartForConditionalGeneration.from_pretrained('facebook/bart-large-cnn')
+text3=[]
 
 # Extractive Functions
-
+text4=[]
 parser = argparse.ArgumentParser()
 parser.add_argument('--filepath', help="File Path", default="articles/article.txt")
 args = parser.parse_args()  
@@ -97,6 +119,12 @@ def tf_idf_matrix(term_freq_mat, matrix_idf):
 
     return matrix_tf_idf
 
+def listToString(s):
+    str1 = ""
+    for ele in s:
+        str1 += ele
+    return str1
+
 def sentence_scores(matrix_tf_idf):
     sent_score = {}
 
@@ -140,63 +168,103 @@ def hello():
 
 
 
-@app.route('/abstract1', methods=['POST'])
-def abstract1():
+## T5
+@app.route('/abstract2', methods=['POST'])
+def abstract2():
     projectpath = request.form['text']
-    print(projectpath)
-    # your code
-    # return a response
-    inputs = tokenizer.encode("summarize: " + projectpath,
+    # print(projectpath)
+    inputs = tokenizer1.encode("summarize: " + projectpath,
                           return_tensors='pt',
                           max_length=512,
                           truncation=True)
 
-
-    summary_ids = model.generate(inputs, max_length=150, min_length=80, length_penalty=5., num_beams=2)
-    data = tokenizer.decode(summary_ids[0])
+    summary_ids = model1.generate(inputs, max_length=150, min_length=30, length_penalty=5., num_beams=2)
+    data = tokenizer1.decode(summary_ids[0])
+    text1=data
+    f = open('data.json')
+    data1 = json.load(f)
+    f.close()
+    data1["text1"] = data
+    with open("data.json", "w") as jsonFile:
+        json.dump(data1, jsonFile)
     return render_template('index1.html',data=data)
 
+## LED
+@app.route('/abstract3', methods=['POST'])
+def abstract3():
+    projectpath = request.form['text']
+    print(projectpath)
+    inputs = tokenizer2([projectpath], max_length=1024, return_tensors='pt')
+    summary_ids = model2.generate(inputs['input_ids'])
+    summary = [tokenizer2.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False) for g in summary_ids] 
+    data = summary
+    text2=data
+    f = open('data.json')
+    data1 = json.load(f)
+    f.close()
+    data1["text2"] = data
+    with open("data.json", "w") as jsonFile:
+        json.dump(data1, jsonFile)
+    return render_template('index1.html',data=data)
 
-
+# BART
+@app.route('/abstract4', methods=['POST'])
+def abstract4():
+    projectpath = request.form['text']
+    print(projectpath)
+    inputs = tokenizer3([projectpath], max_length=1024, return_tensors='pt')
+    summary_ids = model3.generate(inputs['input_ids'])
+    summary = [tokenizer3.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False) for g in summary_ids]
+    data = summary
+    text3=data
+    f = open('data.json')
+    data1 = json.load(f)
+    f.close()
+    data1["text3"] = data
+    with open("data.json", "w") as jsonFile:
+        json.dump(data1, jsonFile)
+    return render_template('index1.html',data=data)
 
 
 @app.route('/extract1', methods=['POST'])
 def extract1():
     text = request.form['text']
-    # print(projectpath)
-    # text=("While a number of definitions of artificial intelligence (AI) have surfaced over the last few decades, John McCarthy offers the following definition in this 2004 paper (PDF, 106 KB) (link resides outside IBM), It is the science and engineering of making intelligent machines, especially intelligent computer programs. It is related to the similar task of using computers to understand human intelligence, but AI does not have to confine itself to methods that are biologically observable.However, decades before this definition, the birth of the artificial intelligence conversation was denoted by Alan Turing's seminal work, Computing Machinery and Intelligence (PDF, 89.8 KB) (link resides outside of IBM), which was published in 1950. In this paper, Turing, often referred to as the father of computer science, asks the following question, Can machines think?  From there, he offers a test, now famously known as the Turing Test, where a human interrogator would try to distinguish between a computer and human text response. While this test has undergone much scrutiny since its publish, it remains an important part of the history of AI as well as an ongoing concept within philosophy as it utilizes ideas around linguistics.")
     sentences = sent_tokenize(text)
     num_sent = len(sentences)
-    # print(sentences)
-
     matrix_freq = frquency_matrix(sentences)
-    # for k,v in matrix_freq.items():
-    #     print(k)
-    #     print(v)
     term_freq_mat = term_freq_matrix(matrix_freq)
-    # for k,v in term_freq_mat.items():
-    #     print(k)
-    #     print(v)
     word_count = total_word_count(matrix_freq)
-    # for k,v in word_doc_count.items():
-    #     print(k)
-    #     print(v)
     matrix_idf = idf_matrix(matrix_freq, word_count, num_sent)
-    # for k,v in matrix_idf.items():
-    #     print(k)
-    #     print(v)
     matrix_tf_idf = tf_idf_matrix(term_freq_mat, matrix_idf)
-    # for k, v in matrix_tf_idf.items():
-    #     print(k)
-    #     print(v)
     scores = sentence_scores(matrix_tf_idf)
-    # for k, v in scores.items():
-    #     print(k)
-    #     print(v)
     avg_score = find_average_score(scores)
-
     summary = generate_summary(sentences, scores, 0.9*avg_score)
     data=summary
+    text4=summary
+    # print(text4)
+    f = open('data.json')
+    data1 = json.load(f)
+    f.close()
+    data1["text4"] = data
+    with open("data.json", "w") as jsonFile:
+        json.dump(data1, jsonFile)
     return render_template('index1.html',data=data)
+
+## ROUGE 
+@app.route('/rouge', methods=['POST'])
+def rouge():
+    reference='John really loves data science very much and studies it a lot.'
+    candidate='John very much loves data science and enjoys it a lot.'
+    scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
+    f = open('data.json')
+    data1 = json.load(f)
+    f.close()
+    str1=data1["text1"]
+    str2=data1["text2"]
+    str3=data1["text3"]
+    str4=data1["text4"]
+    scores = scorer.score(str1,str4)
+    print(scores)
+    return render_template('index1.html')
 
 app.run()

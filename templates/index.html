@@ -95,8 +95,12 @@
                 <textarea class="text-area" placeholder="Result will be displayed here!"></textarea>
                 <button class="copy-button" onclick="copyText()">Copy</button>
                 <div class="buttons">
-                    <button type="submit" formaction="{{ url_for('abstract1') }}">Abstraction</button>
+                    
+                    <button type="submit" formaction="{{ url_for('abstract2') }}">T5</button>
+                    <button type="submit" formaction="{{ url_for('abstract3') }}">LED</button>
+                    <button type="submit" formaction="{{ url_for('abstract4') }}">BART</button>
                     <button type="submit" formaction="{{ url_for('extract1') }}">Extraction</button>
+                    <button type="submit" formaction="{{ url_for('rouge') }}">Score</button>
                 </div>
             </form>
         </div>
