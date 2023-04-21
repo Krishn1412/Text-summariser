@@ -15,6 +15,58 @@ from rouge_score import rouge_scorer
 from rouge import Rouge
 nltk.download('punkt')
 nltk.download('stopwords')
+import numpy as np
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import sent_tokenize, word_tokenize
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.preprocessing import normalize
+
+def preprocess_text(text):
+    # Tokenize text into sentences and words
+    sentences = sent_tokenize(text)
+    words = [word_tokenize(sentence) for sentence in sentences]
+
+    # Flatten the list of words and convert to lowercase
+    words = [word.lower() for sentence in words for word in sentence]
+
+    # Remove stopwords and punctuation
+    stop_words = set(stopwords.words("english"))
+    words = [word for word in words if word.isalnum() and word not in stop_words]
+
+    return words, sentences
+
+def build_similarity_matrix(sentences, words):
+    # Build a similarity matrix based on word overlap
+    vectorizer = CountVectorizer(vocabulary=list(set(words)))
+    word_counts = vectorizer.fit_transform(sentences)
+    similarity_matrix = word_counts.dot(word_counts.T)
+    similarity_matrix = normalize(similarity_matrix, axis=1)
+
+    return similarity_matrix
+
+def pagerank(similarity_matrix, d=0.85, max_iter=100, tol=1e-4):
+    n = similarity_matrix.shape[0]
+    scores = np.ones(n) / n
+    for i in range(max_iter):
+        prev_scores = scores.copy()
+        for j in range(n):
+            scores[j] = (1 - d) + d * np.sum(similarity_matrix[j, :] * prev_scores, axis=0)
+        if np.linalg.norm(scores - prev_scores) < tol:
+            break
+    return scores
+
+
+def text_summarization(text, num_sentences=3):
+    words, sentences = preprocess_text(text)
+    similarity_matrix = build_similarity_matrix(sentences, words)
+    scores = pagerank(similarity_matrix)
+    sorted_indices = np.argsort(scores)[::-1][:num_sentences]
+    summary = [sentences[i] for i in sorted_indices]
+
+    return " ".join(summary)
+
+
 
 ref_text=[]
 # Abstractive model building
@@ -250,6 +302,20 @@ def extract1():
         json.dump(data1, jsonFile)
     return render_template('index1.html',data=data)
 
+
+@app.route('/extract2', methods=['POST'])
+def extract2():
+    text = request.form['text']
+    summary = text_summarization(text, num_sentences=2)
+    data=summary
+    f = open('data.json')
+    data1 = json.load(f)
+    f.close()
+    data1["text5"] = data
+    with open("data.json", "w") as jsonFile:
+        json.dump(data1, jsonFile)
+    return render_template('index1.html',data=data)
+
 ## ROUGE 
 @app.route('/rouge', methods=['POST'])
 def rouge():
@@ -263,6 +329,7 @@ def rouge():
     str2=data1["text2"]
     str3=data1["text3"]
     str4=data1["text4"]
+    str5=data1["text5"]
     scores = scorer.score(str1,str4)
     print(scores)
     return render_template('index1.html')
