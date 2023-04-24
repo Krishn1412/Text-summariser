@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Animated Background</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body>
+    <div class="background">
+        <div class="bg1"></div>
+        <div class="content">
+            <h1>AI Text Summarizer</h1>
+            <p></p>
+                <button id="myButton" onclick="openFlaskApp()">Open Flask App</button>
+        </div>
+
+    </div>
+    <script>
+        function openFlaskApp() {
+            // Send a request to Flask-based web app
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "http://localhost:5000/", true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        alert("Flask App opened successfully!");
+                        window.open('http://localhost:5000/');
+                    } else {
+                        window.open('http://localhost:5000/');
+                    }
+                }
+            };
+            xhr.send();
+            }
+    </script>
+    <script src="main.js"></script>
+</body>
+
+</html>

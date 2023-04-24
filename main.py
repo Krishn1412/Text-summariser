@@ -1,5 +1,10 @@
-from flask import Flask,render_template,request
+from flask import Flask,render_template,request,send_file
 from transformers import AutoTokenizer, AutoModelWithLMHead
+import matplotlib
+matplotlib.use('Agg')  # Set the backend to 'Agg'
+import matplotlib.pyplot as plt
+import seaborn as sns
+from wordcloud import WordCloud
 import torch
 import json
 import nltk
@@ -21,6 +26,7 @@ from nltk.corpus import stopwords
 from nltk.tokenize import sent_tokenize, word_tokenize
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import normalize
+from io import BytesIO
 
 def preprocess_text(text):
     # Tokenize text into sentences and words
@@ -66,6 +72,10 @@ def text_summarization(text, num_sentences=3):
 
     return " ".join(summary)
 
+def calculate_rouge_scores(reference, summary):
+    rouge = Rouge()
+    scores = rouge.get_scores(summary, reference)
+    return scores
 
 
 ref_text=[]
@@ -219,7 +229,6 @@ def hello():
     return render_template('index.html')
 
 
-
 ## T5
 @app.route('/abstract2', methods=['POST'])
 def abstract2():
@@ -232,6 +241,7 @@ def abstract2():
 
     summary_ids = model1.generate(inputs, max_length=150, min_length=30, length_penalty=5., num_beams=2)
     data = tokenizer1.decode(summary_ids[0])
+    data=data[5:-4]
     text1=data
     f = open('data.json')
     data1 = json.load(f)
@@ -249,7 +259,7 @@ def abstract3():
     inputs = tokenizer2([projectpath], max_length=1024, return_tensors='pt')
     summary_ids = model2.generate(inputs['input_ids'])
     summary = [tokenizer2.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False) for g in summary_ids] 
-    data = summary
+    data = summary[0]
     text2=data
     f = open('data.json')
     data1 = json.load(f)
@@ -267,7 +277,7 @@ def abstract4():
     inputs = tokenizer3([projectpath], max_length=1024, return_tensors='pt')
     summary_ids = model3.generate(inputs['input_ids'])
     summary = [tokenizer3.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False) for g in summary_ids]
-    data = summary
+    data = summary[0]
     text3=data
     f = open('data.json')
     data1 = json.load(f)
@@ -317,8 +327,8 @@ def extract2():
     return render_template('index1.html',data=data)
 
 ## ROUGE 
-@app.route('/rouge', methods=['POST'])
-def rouge():
+@app.route('/plot1', methods=['GET'])
+def plot1():
     reference='John really loves data science very much and studies it a lot.'
     candidate='John very much loves data science and enjoys it a lot.'
     scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
@@ -330,8 +340,373 @@ def rouge():
     str3=data1["text3"]
     str4=data1["text4"]
     str5=data1["text5"]
-    scores = scorer.score(str1,str4)
-    print(scores)
-    return render_template('index1.html')
+    ref=data1["ref"]
+    
+    score1 = calculate_rouge_scores(ref, str1)
+    score2 = calculate_rouge_scores(ref, str2)
+    score3 = calculate_rouge_scores(ref, str3)
+    score4 = calculate_rouge_scores(ref, str4)
+    score5 = calculate_rouge_scores(ref, str5)
+    
+    rouge1_score1 = score1[0]['rouge-1']['f']
+    rouge2_score1 = score1[0]['rouge-2']['f']
+    rougeL_score1 = score1[0]['rouge-l']['f']
+    
+    rouge1_score2 = score2[0]['rouge-1']['f']
+    rouge2_score2 = score2[0]['rouge-2']['f']
+    rougeL_score2 = score2[0]['rouge-l']['f']
+    
+    rouge1_score3 = score3[0]['rouge-1']['f']
+    rouge2_score3 = score3[0]['rouge-2']['f']
+    rougeL_score3 = score3[0]['rouge-l']['f']
+    
+    rouge1_score4 = score4[0]['rouge-1']['f']
+    rouge2_score4 = score4[0]['rouge-2']['f']
+    rougeL_score4 = score4[0]['rouge-l']['f']
+    
+    rouge1_score5 = score5[0]['rouge-1']['f']
+    rouge2_score5 = score5[0]['rouge-2']['f']
+    rougeL_score5 = score5[0]['rouge-l']['f']
+
+    summarizer_names = ['T5', 'LED', 'BART','TF-IDF','PAGE-RANK']
+    summary_lengths = [len(str1), len(str2), len(str3),len(str4),len(str5)]
+    rouge1_scores = [rouge1_score1, rouge1_score2, rouge1_score3,rouge1_score4,rouge1_score5]
+    rouge2_scores = [rouge2_score1, rouge2_score2, rouge2_score3,rouge2_score4,rouge2_score5]
+    rougeL_scores = [rougeL_score1, rougeL_score2, rougeL_score3,rougeL_score4,rougeL_score5]
+
+    # Bar Chart for Summary Lengths
+    plt.figure(figsize=(8, 6))
+    sns.barplot(x=summarizer_names, y=summary_lengths)
+    plt.title('Summary Lengths by Summarizer')
+    plt.xlabel('Summarizer')
+    plt.ylabel('Summary Length')
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    # plt.show()
+    plt.clf()
+    return send_file(buffer,mimetype='image/png')
+
+
+@app.route('/plot2', methods=['GET'])
+def plot2():
+    f = open('data.json')
+    data1 = json.load(f)
+    f.close()
+    str1=data1["text1"]
+    str2=data1["text2"]
+    str3=data1["text3"]
+    str4=data1["text4"]
+    str5=data1["text5"]
+    ref=data1["ref"]
+    
+    score1 = calculate_rouge_scores(ref, str1)
+    score2 = calculate_rouge_scores(ref, str2)
+    score3 = calculate_rouge_scores(ref, str3)
+    score4 = calculate_rouge_scores(ref, str4)
+    score5 = calculate_rouge_scores(ref, str5)
+    
+    rouge1_score1 = score1[0]['rouge-1']['f']
+    rouge2_score1 = score1[0]['rouge-2']['f']
+    rougeL_score1 = score1[0]['rouge-l']['f']
+    
+    rouge1_score2 = score2[0]['rouge-1']['f']
+    rouge2_score2 = score2[0]['rouge-2']['f']
+    rougeL_score2 = score2[0]['rouge-l']['f']
+    
+    rouge1_score3 = score3[0]['rouge-1']['f']
+    rouge2_score3 = score3[0]['rouge-2']['f']
+    rougeL_score3 = score3[0]['rouge-l']['f']
+    
+    rouge1_score4 = score4[0]['rouge-1']['f']
+    rouge2_score4 = score4[0]['rouge-2']['f']
+    rougeL_score4 = score4[0]['rouge-l']['f']
+    
+    rouge1_score5 = score5[0]['rouge-1']['f']
+    rouge2_score5 = score5[0]['rouge-2']['f']
+    rougeL_score5 = score5[0]['rouge-l']['f']
+    
+    
+    summarizer_names = ['T5', 'LED', 'BART','TF-IDF','PAGE-RANK']
+    summary_lengths = [len(str1), len(str2), len(str3),len(str4),len(str5)]
+    rouge1_scores = [rouge1_score1, rouge1_score2, rouge1_score3,rouge1_score4,rouge1_score5]
+    rouge2_scores = [rouge2_score1, rouge2_score2, rouge2_score3,rouge2_score4,rouge2_score5]
+    rougeL_scores = [rougeL_score1, rougeL_score2, rougeL_score3,rougeL_score4,rougeL_score5]
+
+    # Line Chart for ROUGE Scores
+    plt.figure(figsize=(8, 6))
+    sns.lineplot(x=summarizer_names, y=rouge1_scores)
+    plt.title('ROUGE Scores by Summarizer')
+    plt.xlabel('Summarizer')
+    plt.ylabel('ROUGE-1 Score')
+    # plt.show()
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    # Clear the plot
+    plt.clf()
+    # Return the plot as an image file
+    return send_file(buffer, mimetype='image/png')
+
+@app.route('/plot3', methods=['GET'])
+def plot3():
+    f = open('data.json')
+    data1 = json.load(f)
+    f.close()
+    str1=data1["text1"]
+    str2=data1["text2"]
+    str3=data1["text3"]
+    str4=data1["text4"]
+    str5=data1["text5"]
+    ref=data1["ref"]
+    
+    
+    score1 = calculate_rouge_scores(ref, str1)
+    score2 = calculate_rouge_scores(ref, str2)
+    score3 = calculate_rouge_scores(ref, str3)
+    score4 = calculate_rouge_scores(ref, str4)
+    score5 = calculate_rouge_scores(ref, str5)
+    
+    rouge1_score1 = score1[0]['rouge-1']['f']
+    rouge2_score1 = score1[0]['rouge-2']['f']
+    rougeL_score1 = score1[0]['rouge-l']['f']
+    
+    rouge1_score2 = score2[0]['rouge-1']['f']
+    rouge2_score2 = score2[0]['rouge-2']['f']
+    rougeL_score2 = score2[0]['rouge-l']['f']
+    
+    rouge1_score3 = score3[0]['rouge-1']['f']
+    rouge2_score3 = score3[0]['rouge-2']['f']
+    rougeL_score3 = score3[0]['rouge-l']['f']
+    
+    rouge1_score4 = score4[0]['rouge-1']['f']
+    rouge2_score4 = score4[0]['rouge-2']['f']
+    rougeL_score4 = score4[0]['rouge-l']['f']
+    
+    rouge1_score5 = score5[0]['rouge-1']['f']
+    rouge2_score5 = score5[0]['rouge-2']['f']
+    rougeL_score5 = score5[0]['rouge-l']['f']
+    
+    summarizer_names = ['T5', 'LED', 'BART','TF-IDF','PAGE-RANK']
+    summary_lengths = [len(str1), len(str2), len(str3),len(str4),len(str5)]
+    rouge1_scores = [rouge1_score1, rouge1_score2, rouge1_score3,rouge1_score4,rouge1_score5]
+    rouge2_scores = [rouge2_score1, rouge2_score2, rouge2_score3,rouge2_score4,rouge2_score5]
+    rougeL_scores = [rougeL_score1, rougeL_score2, rougeL_score3,rougeL_score4,rougeL_score5]
+
+    # Line Chart for ROUGE Scores
+    plt.figure(figsize=(8, 6))
+    sns.lineplot(x=summarizer_names, y=rouge2_scores)
+    plt.title('ROUGE Scores by Summarizer')
+    plt.xlabel('Summarizer')
+    plt.ylabel('ROUGE-2 Score')
+    # plt.show()
+    
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    plt.clf()
+    return send_file(buffer,mimetype='image/png')
+
+@app.route('/plot4', methods=['GET'])
+def plot4():
+    f = open('data.json')
+    data1 = json.load(f)
+    f.close()
+    str1=data1["text1"]
+    str2=data1["text2"]
+    str3=data1["text3"]
+    str4=data1["text4"]
+    str5=data1["text5"]
+    ref=data1["ref"]
+    
+    score1 = calculate_rouge_scores(ref, str1)
+    score2 = calculate_rouge_scores(ref, str2)
+    score3 = calculate_rouge_scores(ref, str3)
+    score4 = calculate_rouge_scores(ref, str4)
+    score5 = calculate_rouge_scores(ref, str5)
+    
+    rouge1_score1 = score1[0]['rouge-1']['f']
+    rouge2_score1 = score1[0]['rouge-2']['f']
+    rougeL_score1 = score1[0]['rouge-l']['f']
+    
+    rouge1_score2 = score2[0]['rouge-1']['f']
+    rouge2_score2 = score2[0]['rouge-2']['f']
+    rougeL_score2 = score2[0]['rouge-l']['f']
+    
+    rouge1_score3 = score3[0]['rouge-1']['f']
+    rouge2_score3 = score3[0]['rouge-2']['f']
+    rougeL_score3 = score3[0]['rouge-l']['f']
+    
+    rouge1_score4 = score4[0]['rouge-1']['f']
+    rouge2_score4 = score4[0]['rouge-2']['f']
+    rougeL_score4 = score4[0]['rouge-l']['f']
+    
+    rouge1_score5 = score5[0]['rouge-1']['f']
+    rouge2_score5 = score5[0]['rouge-2']['f']
+    rougeL_score5 = score5[0]['rouge-l']['f']
+    
+    
+    summarizer_names = ['T5', 'LED', 'BART','TF-IDF','PAGE-RANK']
+    summary_lengths = [len(str1), len(str2), len(str3),len(str4),len(str5)]
+    rouge1_scores = [rouge1_score1, rouge1_score2, rouge1_score3,rouge1_score4,rouge1_score5]
+    rouge2_scores = [rouge2_score1, rouge2_score2, rouge2_score3,rouge2_score4,rouge2_score5]
+    rougeL_scores = [rougeL_score1, rougeL_score2, rougeL_score3,rougeL_score4,rougeL_score5]
+
+    # Box Plot for Summary Lengths
+    plt.figure(figsize=(8, 6))
+    sns.boxplot(x=summarizer_names, y=summary_lengths)
+    plt.title('Summary Lengths Distribution by Summarizer')
+    plt.xlabel('Summarizer')
+    plt.ylabel('Summary Length')
+    # plt.show()
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    # Clear the plot
+    plt.clf()
+    # Return the plot as an image file
+    return send_file(buffer, mimetype='image/png')
+
+@app.route('/plot5', methods=['GET'])
+def plot5():
+    f = open('data.json')
+    data1 = json.load(f)
+    f.close()
+    str1=data1["text1"]
+    str2=data1["text2"]
+    str3=data1["text3"]
+    str4=data1["text4"]
+    str5=data1["text5"]
+    ref=data1["ref"]
+    
+    score1 = calculate_rouge_scores(ref, str1)
+    score2 = calculate_rouge_scores(ref, str2)
+    score3 = calculate_rouge_scores(ref, str3)
+    score4 = calculate_rouge_scores(ref, str4)
+    score5 = calculate_rouge_scores(ref, str5)
+    
+    rouge1_score1 = score1[0]['rouge-1']['f']
+    rouge2_score1 = score1[0]['rouge-2']['f']
+    rougeL_score1 = score1[0]['rouge-l']['f']
+    
+    rouge1_score2 = score2[0]['rouge-1']['f']
+    rouge2_score2 = score2[0]['rouge-2']['f']
+    rougeL_score2 = score2[0]['rouge-l']['f']
+    
+    rouge1_score3 = score3[0]['rouge-1']['f']
+    rouge2_score3 = score3[0]['rouge-2']['f']
+    rougeL_score3 = score3[0]['rouge-l']['f']
+    
+    rouge1_score4 = score4[0]['rouge-1']['f']
+    rouge2_score4 = score4[0]['rouge-2']['f']
+    rougeL_score4 = score4[0]['rouge-l']['f']
+    
+    rouge1_score5 = score5[0]['rouge-1']['f']
+    rouge2_score5 = score5[0]['rouge-2']['f']
+    rougeL_score5 = score5[0]['rouge-l']['f']
+    
+    summarizer_names = ['T5', 'LED', 'BART','TF-IDF','PAGE-RANK']
+    summary_lengths = [len(str1), len(str2), len(str3),len(str4),len(str5)]
+    rougeL_scores = [rougeL_score1, rougeL_score2, rougeL_score3,rougeL_score4,rougeL_score5]
+
+    # Line Chart for ROUGE Scores
+    plt.figure(figsize=(8, 6))
+    sns.lineplot(x=summarizer_names, y=rougeL_scores)
+    plt.title('ROUGE Scores by Summarizer')
+    plt.xlabel('Summarizer')
+    plt.ylabel('ROUGE-L Score')
+    # plt.show()
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    # Clear the plot
+    plt.clf()
+    # Return the plot as an image file
+    return send_file(buffer, mimetype='image/png')
+
+@app.route('/plot6', methods=['GET'])
+def plot6():
+    f = open('data.json')
+    data1 = json.load(f)
+    f.close()
+    str1=data1["text1"]
+    str2=data1["text2"]
+    str3=data1["text3"]
+    str4=data1["text4"]
+    str5=data1["text5"]
+    ref=data1["ref"]
+    
+    score1 = calculate_rouge_scores(ref, str1)
+    score2 = calculate_rouge_scores(ref, str2)
+    score3 = calculate_rouge_scores(ref, str3)
+    score4 = calculate_rouge_scores(ref, str4)
+    score5 = calculate_rouge_scores(ref, str5)
+    
+    rouge1_score1 = score1[0]['rouge-1']['f']
+    rouge2_score1 = score1[0]['rouge-2']['f']
+    rougeL_score1 = score1[0]['rouge-l']['f']
+    
+    rouge1_score2 = score2[0]['rouge-1']['f']
+    rouge2_score2 = score2[0]['rouge-2']['f']
+    rougeL_score2 = score2[0]['rouge-l']['f']
+    
+    rouge1_score3 = score3[0]['rouge-1']['f']
+    rouge2_score3 = score3[0]['rouge-2']['f']
+    rougeL_score3 = score3[0]['rouge-l']['f']
+    
+    rouge1_score4 = score4[0]['rouge-1']['f']
+    rouge2_score4 = score4[0]['rouge-2']['f']
+    rougeL_score4 = score4[0]['rouge-l']['f']
+    
+    rouge1_score5 = score5[0]['rouge-1']['f']
+    rouge2_score5 = score5[0]['rouge-2']['f']
+    rougeL_score5 = score5[0]['rouge-l']['f']
+    
+    summarizer_names = ['T5', 'LED', 'BART','TF-IDF','PAGE-RANK']
+
+    # Radar Chart for Performance Metrics
+    plt.figure(figsize=(8, 6))
+    metrics = ['Summary Length', 'ROUGE-L Score']  # Add more metrics as needed
+    data = [[len(str1), rougeL_score1], [len(str2), rougeL_score2], [len(str3), rougeL_score3], [len(str4), rougeL_score4], [len(str5), rougeL_score5]]  # Example data for each summarizer
+    sns.lineplot(x=metrics, y=data[0], label=summarizer_names[0])
+    sns.lineplot(x=metrics, y=data[1], label=summarizer_names[1])
+    sns.lineplot(x=metrics, y=data[2], label=summarizer_names[2])
+    sns.lineplot(x=metrics, y=data[3], label=summarizer_names[3])
+    sns.lineplot(x=metrics, y=data[4], label=summarizer_names[4])
+    plt.title('Performance Metrics by Summarizer')
+    plt.xlabel('Metrics')
+    plt.ylabel('Value')
+    plt.legend(title='Summarizer')
+    # plt.show()
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    plt.clf()
+    return send_file(buffer,mimetype='image/png')
+
+
+@app.route('/rouge1',methods=['GET', 'POST'])
+def rouge1():
+    return render_template('plot1.html')
+
+@app.route('/rouge2',methods=['GET', 'POST'])
+def rouge2():
+    return render_template('plot2.html')
+
+@app.route('/rouge3',methods=['GET', 'POST'])
+def rouge3():
+    return render_template('plot3.html')
+
+@app.route('/rouge4',methods=['GET', 'POST'])
+def rouge4():
+    return render_template('plot4.html')
+
+@app.route('/rouge5',methods=['GET', 'POST'])
+def rouge5():
+    return render_template('plot5.html')
+
+@app.route('/rouge6',methods=['GET', 'POST'])
+def rouge6():
+    return render_template('plot6.html')
 
 app.run()

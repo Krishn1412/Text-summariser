@@ -89,10 +89,11 @@
 
 <body>
     <h1>Text summariser</h1>
-    <div class="container">
-        <form action="" method="post">
+    <div>
+        <form action="" method="post" class="container">
             <textarea class="text-area" id="text" name="text" placeholder="Add text here..."></textarea>
-            <textarea class="text-area" placeholder="Result will be displayed here!" id="result" name="result">{{data}}</textarea>
+            <textarea class="text-area" placeholder="Result will be displayed here!" id="result"
+                name="result">{{data}}</textarea>
             <button class="copy-button" onclick="copyText()">Copy</button>
             <div class="buttons">
             </div>

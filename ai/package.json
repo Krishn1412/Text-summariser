@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "gsap": "^3.11.5",
+    "three": "^0.151.3"
+  },
+  "name": "ai",
+  "version": "1.0.0",
+  "main": "main.js",
+  "devDependencies": {
+    "parcel-bundler": "^1.12.5"
+  },
+  "scripts": {
+    "dev": "parcel export.html --open"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

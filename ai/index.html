@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>AI Project</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .text-area {
+            width: 80%;
+            height: 200px;
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            resize: none;
+            font-size: 16px;
+            line-height: 1.5;
+            outline: none;
+            background-color: #222222;
+            color: #ffffff;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            margin: 10px;
+        }
+
+        .buttons button {
+            margin: 20px 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #ffffff;
+            background-color: #333333;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .buttons button:hover {
+            background-color: #555555;
+        }
+
+        .copy-button {
+            margin-top: -60px;
+            margin-left: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #fff;
+            background-color: #333;
+            font-family: Arial, sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .copy-button:hover {
+            background-color: #555;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <h1>Text summariser</h1>
+    <div class="container">
+        <textarea class="text-area" placeholder="Add text here..."></textarea>
+        <textarea class="text-area" placeholder="Result will be displayed here!"></textarea>
+
+        <button class="copy-button" onclick="copyText()">Copy</button>
+        <div class="buttons">
+            <button>Button 1</button>
+            <button>Button 2</button>
+        </div>
+    </div>
+
+
+    <script>
+        function copyText() {
+            var copyText = document.querySelectorAll(".text-area")[1];
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            document.execCommand("copy");
+            alert("Copied to clipboard!");
+        }
+    </script>
+</body>
+
+</html>
